@@ -10,18 +10,15 @@ services:
     container_name: nocodb_container
     environment:
       # Need to configure this: https://docs.nocodb.com/getting-started/self-hosted/environment-variables
-
+      NC_DISABLE_TELE: true
       # This uses docker internal network, so use 3306 for the mysql server
       NC_DB: "mysql2://mysql_server:3306?u=nocodbuser&p=longnocopassfordb&d=noco_db"
-      # NC_AUTH_JWT_SECRET: ""
-      # NC_PUBLIC_URL: ""
-      # NC_REDIS_URL: ""
     image: "nocodb/nocodb:latest"
     ports:
       - "9671:8080"
     restart: always
     volumes:
-      - "./nc_data:/usr/app/data"
+      - "nc_data:/usr/app/data"
   mysql_server:
     container_name: mysql_container
     environment:
@@ -47,3 +44,6 @@ services:
     restart: always
     volumes:
       - "./db_data:/var/lib/mysql"
+
+volumes:
+  nc_data: {}
