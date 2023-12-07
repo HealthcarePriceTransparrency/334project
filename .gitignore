@@ -167,3 +167,8 @@ hospital-price-transparency/
 docker/databases/
 docker/db_data/
 docker/nc_data/
+
+# Ignore SSH and env secrets
+secrets/
+.env
+*.key
