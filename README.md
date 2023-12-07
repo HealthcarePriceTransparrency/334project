@@ -4,7 +4,7 @@ I've attempted to make this a good resource for everything related to our projec
 
 ## Resources
 
-Important logins and links are shared in our project folder.
+Important logins, links, and secrets are shared in our project folder.
 
 Google Drive Folder: https://drive.google.com/drive/folders/1ocedxrBb3HQyzmydgoHR4PNEdymWVgeO?usp=drive_link
 
@@ -75,7 +75,7 @@ This sets up two services in Docker:
 
     1. Run docker compose to setup the containers
     
-        `docker-compose up -d`
+        `docker compose up -d`
     
     1. Check that the containers are running
     
@@ -83,7 +83,7 @@ This sets up two services in Docker:
     
     1. Import the data exported from Dolt into the database
     
-        1. Create the table in the db
+        1. Create the database on the server
         
             `docker exec -i mysql_container mysql -uroot -ppassword -e "create database hospital_price_transparency;"`
 
@@ -107,15 +107,86 @@ This sets up two services in Docker:
 
             `docker exec -i mysql_container mysql -u root -ppassword hospital_price_transparency -e "show tables;"`
 
+            Note: Depending on system, this command may not show the tables you are looking for. This is likely because of strange import behavior from the Dolt dump where it creates a new database under the original database name.
+            
+            <details>
+            <summary>If this is the case, you can follow these steps to confirm and fix the problem:</summary>
+
+            1. Show the available databases
+
+                `docker exec -i mysql_container mysql -u root -ppassword -e "show databases;"`
+
+                The output of this command should look something like this:
+
+                ```bash
+                Database
+                hospital-price-transparency
+                hospital_price_transparency
+                information_schema
+                mysql
+                noco_db
+                performance_schema
+                sys
+                ubuntu
+                ```
+
+                If you see two databases with roughly the same name, proceed.
+
+            1. Move the tables from the imported database to the proper database
+
+                `docker exec -i mysql_container mysql -u root -ppassword hospital-price-transparency -e "RENAME TABLE cpt_hcpcs TO hospital_price_transparency.cpt_hcpcs;
+                RENAME TABLE hospitals TO hospital_price_transparency.hospitals;
+                RENAME TABLE prices TO hospital_price_transparency.prices;"`
+
+            1. Confirm the tables were moved
+
+                `docker exec -i mysql_container mysql -u root -ppassword hospital_price_transparency -e "show tables;"`
+
+            1. Drop the now empty imported database
+
+                `docker exec -i mysql_container mysql -u root -ppassword -e "DROP DATABASE \`hospital-price-transparency\`;"`
+
+            1. Confirm the database was dropped
+
+                `docker exec -i mysql_container mysql -u root -ppassword -e "show databases;"`
+
+            </details>
+
     1. Create a read-only user for our db to prevent accidental writes when using the python scripts (pythonuser:longpasswordforpythonuser)
 
-        `docker exec -i mysql_container mysql -uroot -ppassword -e "GRANT SELECT ON hospital_price_transparency.* TO 'pythonuser'@'%' IDENTIFIED BY 'longpasswordforpythonuser'; FLUSH PRIVILEGES;"`
+        `docker exec -i mysql_container mysql -uroot -ppassword -e "CREATE USER 'pythonuser'@'%' IDENTIFIED BY 'longpasswordforpythonuser'; GRANT SELECT ON hospital_price_transparency.* TO 'pythonuser'@'%'; FLUSH PRIVILEGES;"`
 
 1. Create an unprivileged ssh user to allow access to the sql server
 
     1. Create the user: `useradd -s /sbin/nologin databaseTunnelUser`
 
     1. Give the user a password: `passwd databaseTunnelUser`
+
+    <details>
+    <summary>(Optional) If you want to use SSH instead of password login:</summary>
+
+    1. Create the homedir for the user: `mkhomedir_helper databaseTunnelUser`
+
+    1. Create an ssh key: `ssh-keygen -t rsa -b 4096 -C "databaseTunnelUser"`
+
+    1. Copy the entire generated public key to a new line in the authorized users file on the server located at `/home/databaseTunnelUser/.ssh/authorized_keys`
+
+    </details>
+
+    <details>
+    <summary>(Optional) If you want to further restrict the ssh user's privileges:</summary>
+
+    Add the following to the `/etc/ssh/sshd_config` file:
+
+    ```bash
+    Match User databaseTunnelUser
+        PermitOpen 127.0.0.1:9670
+        X11Forwarding no
+        AllowAgentForwarding no
+        ForceCommand /bin/false
+    ```
+
+    </details>
 
 1. Forward the Noco Web Interface
 
@@ -150,7 +221,7 @@ See this stackoverflow post for a more in-depth explanation: https://stackoverfl
 1. Connect to the database through the tunnel using the user created earlier:
 
     ```yaml
-    uri: localhost:9670
+    uri: 127.0.0.1:9670
     user: pythonuser
     password: longpasswordforpythonuser
     ```
