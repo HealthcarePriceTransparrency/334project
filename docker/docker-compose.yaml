@@ -1,13 +1,49 @@
-version: '3.8'
+# Following instructions from here: https://docs.nocodb.com/getting-started/self-hosted/installation
+# compose file originally sourced from here: https://github.com/nocodb/nocodb/blob/develop/docker-compose/mysql/docker-compose.yml
 
+version: "2.1"
 services:
-  dolt-sql-server:
-    image: dolthub/dolt-sql-server:latest
+  nocodb:
+    depends_on:
+      mysql_server:
+        condition: service_healthy
+    container_name: nocodb_container
+    environment:
+      # Need to configure this: https://docs.nocodb.com/getting-started/self-hosted/environment-variables
+
+      # This uses docker internal network, so use 3306 for the mysql server
+      NC_DB: "mysql2://mysql_server:3306?u=nocodbuser&p=longnocopassfordb&d=noco_db"
+      # NC_AUTH_JWT_SECRET: ""
+      # NC_PUBLIC_URL: ""
+      # NC_REDIS_URL: ""
+    image: "nocodb/nocodb:latest"
     ports:
-      - "3307:3307"
+      - "9671:8080"
+    restart: always
     volumes:
-      # Mount the server directory with a single .yaml config
-      - ./servercfg:/etc/dolt/servercfg.d
-      # Passthrough the database directory so that it can be used in the container
-      - ./databases:/var/lib/dolt
-    restart: unless-stopped
+      - "./nc_data:/usr/app/data"
+  mysql_server:
+    container_name: mysql_container
+    environment:
+      # Create the root user for MySQL
+      MYSQL_ROOT_PASSWORD: password
+      # Create the db to use for Noco metadata
+      MYSQL_DATABASE: noco_db
+      MYSQL_USER: nocodbuser
+      MYSQL_PASSWORD: longnocopassfordb
+      # The hospital database will be created by import later
+    healthcheck:
+      retries: 10
+      test:
+        - CMD
+        - mysqladmin
+        - ping
+        - "-h"
+        - localhost
+      timeout: 20s
+    image: "mysql:8.0.35"
+    ports:
+      - "9670:3306"
+    restart: always
+    volumes:
+      - "./db_data:/var/lib/mysql"
