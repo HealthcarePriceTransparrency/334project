@@ -8,11 +8,40 @@ Important logins, links, and secrets are shared in our project folder.
 
 Google Drive Folder: https://drive.google.com/drive/folders/1ocedxrBb3HQyzmydgoHR4PNEdymWVgeO?usp=drive_link
 
+### Usage
+
+To access the database, you will need some extra resources not included in this repository such as authentication keys and passwords.
+
+#### First Time Use
+
+1. Clone this repository and cd into it
+
+    ```bash
+    git clone https://github.com/HealthcarePriceTransparrency/334project.git && cd 334project
+    ```
+
+1. Create a 'secrets' directory
+
+    ```bash
+    mkdir secrets
+    ```
+
+1. Copy the following files from the shared drive folder to the secrets folder:
+
+    ```
+    .env
+    dbTunnel.key
+    ```
+
+#### Connecting to the Database
+
+Examples for connecting to the database can be found in `dataFetchDemo.ipynb` file.
+
 ## Pre-Processing
 
 Notes on the pre-processing of the data.
 
-### **Notable Changes**
+### Notable Changes
 
 *   Kept in 'city' feature, since with ordinal encoding, we would only have 3 features (npi_number, payer, and state )
 
@@ -31,210 +60,5 @@ Created the model and chose a K of 6 based on the results of R2:
 | 7 | 0.12425772455590434 | 0.15282217668851883 |
 | 8 | 0.1108127957041688 | 0.13256402729049965 |
 
-## SQL Server Docker
 
-*Not up yet*
 
-Here are my notes on how to get the SQL Server Docker image up and running. I'm using the free tier from [Oracle Cloud](https://www.oracle.com/cloud/free/).
-
-This sets up two services in Docker:
-
-1. MySQL Server
-
-    This is the database
-
-1. NocoDB Web Interface
-    
-    This is a web interface for the database
-
-### Setup
-
-1. Export the data from Dolt
-
-    1. Install Dolt
-
-    1. Clone the data from Dolt
-
-        `dolt clone dolthub/hospital-price-transparency`
-
-    1. Export the data to a SQL file
-
-        `dolt dump`
-
-1. Get the SQL server running
-
-    1. Install Docker
-
-    1. Move into the 'docker' directory
-
-        `cd docker`
-
-    1. Copy the SQL file into the 'docker' directory
-
-        `cp PATHTODOLTDUMP/doltdump.sql .`
-
-    1. Run docker compose to setup the containers
-    
-        `docker compose up -d`
-    
-    1. Check that the containers are running
-    
-        `docker ps`
-    
-    1. Import the data exported from Dolt into the database
-    
-        1. Create the database on the server
-        
-            `docker exec -i mysql_container mysql -uroot -ppassword -e "create database hospital_price_transparency;"`
-
-        1. Confirm the table exists
-
-            `docker exec -i mysql_container mysql -uroot -ppassword -e "show databases;"`
-
-        1. Import the data into the database
-
-            Warning: This will take awhile.
-
-            On unix:
-
-            `docker exec -i mysql_container mysql -uroot -ppassword hospital_price_transparency < doltdump.sql`
-
-            On windows:
-
-            `cmd /c "docker exec -i mysql_container mysql -uroot -ppassword hospital_price_transparency < doltdump.sql"`
-
-        1. Check that the data was imported
-
-            `docker exec -i mysql_container mysql -u root -ppassword hospital_price_transparency -e "show tables;"`
-
-            Note: Depending on system, this command may not show the tables you are looking for. This is likely because of strange import behavior from the Dolt dump where it creates a new database under the original database name.
-            
-            <details>
-            <summary>If this is the case, you can follow these steps to confirm and fix the problem:</summary>
-
-            1. Show the available databases
-
-                `docker exec -i mysql_container mysql -u root -ppassword -e "show databases;"`
-
-                The output of this command should look something like this:
-
-                ```bash
-                Database
-                hospital-price-transparency
-                hospital_price_transparency
-                information_schema
-                mysql
-                noco_db
-                performance_schema
-                sys
-                ubuntu
-                ```
-
-                If you see two databases with roughly the same name, proceed.
-
-            1. Move the tables from the imported database to the proper database
-
-                `docker exec -i mysql_container mysql -u root -ppassword hospital-price-transparency -e "RENAME TABLE cpt_hcpcs TO hospital_price_transparency.cpt_hcpcs;
-                RENAME TABLE hospitals TO hospital_price_transparency.hospitals;
-                RENAME TABLE prices TO hospital_price_transparency.prices;"`
-
-            1. Confirm the tables were moved
-
-                `docker exec -i mysql_container mysql -u root -ppassword hospital_price_transparency -e "show tables;"`
-
-            1. Drop the now empty imported database
-
-                `docker exec -i mysql_container mysql -u root -ppassword -e "DROP DATABASE \`hospital-price-transparency\`;"`
-
-            1. Confirm the database was dropped
-
-                `docker exec -i mysql_container mysql -u root -ppassword -e "show databases;"`
-
-            </details>
-
-    1. Create a read-only user for our db to prevent accidental writes when using the python scripts (pythonuser:longpasswordforpythonuser)
-
-        `docker exec -i mysql_container mysql -uroot -ppassword -e "CREATE USER 'pythonuser'@'%' IDENTIFIED BY 'longpasswordforpythonuser'; GRANT SELECT ON hospital_price_transparency.* TO 'pythonuser'@'%'; FLUSH PRIVILEGES;"`
-
-1. Create an unprivileged ssh user to allow access to the sql server
-
-    1. Create the user: `useradd -s /sbin/nologin databaseTunnelUser`
-
-    1. Give the user a password: `passwd databaseTunnelUser`
-
-    <details>
-    <summary>(Optional) If you want to use SSH instead of password login:</summary>
-
-    1. Create the homedir for the user: `mkhomedir_helper databaseTunnelUser`
-
-    1. Create an ssh key: `ssh-keygen -t rsa -b 4096 -C "databaseTunnelUser"`
-
-    1. Copy the entire generated public key to a new line in the authorized users file on the server located at `/home/databaseTunnelUser/.ssh/authorized_keys`
-
-    </details>
-
-    <details>
-    <summary>(Optional) If you want to further restrict the ssh user's privileges:</summary>
-
-    Add the following to the `/etc/ssh/sshd_config` file:
-
-    ```bash
-    Match User databaseTunnelUser
-        PermitOpen 127.0.0.1:9670
-        X11Forwarding no
-        AllowAgentForwarding no
-        ForceCommand /bin/false
-    ```
-
-    </details>
-
-1. Forward the Noco Web Interface
-
-    This is going to depend on your setup. For an Oracle Cloud server I went about it like this:
-
-    1. Install nginx
-
-    1. Add a proxy_pass to the Noco service in the nginx config
-
-        ```nginx
-        ...
-            location / {
-                proxy_pass http://localhost:9671;
-            }
-        ...
-        ```
-
-### Usage
-
-To access the database, you will need to create an ssh tunnel to the server. This is because the database is only accessible from the server itself.
-
-#### In Python
-
-See this stackoverflow post for a more in-depth explanation: https://stackoverflow.com/questions/31506958/sqlalchemy-through-paramiko-ssh
-
-1. Use an ssh tunnel to connect to the hosted server
-
-    Use the unprivileged ssh user credentials created at the end of the [setup section](#setup) to login to the server that is hosting the database.
-    
-    **For this project I've shared the credentials in our Google Drive folder.**
-
-1. Connect to the database through the tunnel using the user created earlier:
-
-    ```yaml
-    uri: 127.0.0.1:9670
-    user: pythonuser
-    password: longpasswordforpythonuser
-    ```
-
-#### In NocoDB
-
-See docs here: https://docs.nocodb.com/data-sources/connect-to-data-source/
-
-#### Advanced Database Operations
-
-For more advanced database operations, you can connect to the database using the root user and password:
-
-```yaml
-user: root
-password: password
-```
