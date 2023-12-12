@@ -20,6 +20,21 @@ To access the database, you will need some extra resources not included in this 
     git clone https://github.com/HealthcarePriceTransparrency/334project.git && cd 334project
     ```
 
+1. Install Python packages
+
+    (Optional) You can use a virtual environment if you want:
+
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
+
+    Install the required packages:
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
 1. Create a 'secrets' directory
 
     ```bash
