@@ -10,6 +10,14 @@ This folder contains notebooks for our work modeling the price.
 
 - `rf.ipynb`: Notebook for our Random Forest (ensemble) model.
 
+## Decision Tree
+
+Notes on the Decision Tree model.
+
+### Notable Changes
+
+I fixed the broken parts of the script and converted it to a notebook so that we can all use it.
+
 ## KNN Regression
 
 Notes on the KNN model.
@@ -56,3 +64,11 @@ After updating the data pre-processing, I re-ran the KNN model:
 | 6 | 0.05344826213077272 | 0.04039029712779443 |
 | 7 | 0.05856244171786311 | 0.0462752752079002 |
 | 8 | 0.06173719651683206 | 0.0483136723468999 |
+
+## Random Forest
+
+Notes on the Random Forest model.
+
+### Notable Changes
+
+I fixed the broken parts of the script and converted it to a notebook so that we can all use it.
