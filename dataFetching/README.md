@@ -11,3 +11,7 @@ This folder contains notebooks related to fetching specific data from our hosted
 ## Why?
 
 Ideally, this would be batched with our pre-processing to fetch the data and output the formatted files in one go. Instead, these notebooks output CSVs containing all of the fetched data which are transformed by the pre-processing notebooks. This was needed as we had to build out our data hosting solution alongside model development.
+
+## Usage
+
+To use these notebooks, you will need extra resources not included in this repository. Instructions for first time use can be found in the root README.
