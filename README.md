@@ -12,6 +12,15 @@ I've attempted to make this a good resource for everything related to our projec
 
 [[PH] Research Writeup]()
 
+### Repo Structure
+
+- `data/` - Contains all of the data we have used in the models for our project
+- `dataFetching/` - Contains notebooks related to fetching data from our hosted database
+- `dataProcessing/` - Contains notebooks related to pre-processing data for use in our models
+- `docker/` - Contains files related to hosting our database instance
+- `models/` - Contains notebooks related to our models
+- `secrets/` - (Only if accessing database) Contains files related to connecting to the db
+
 ## Usage
 
 1. Clone this repository and cd into it
